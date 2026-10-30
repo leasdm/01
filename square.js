@@ -253,9 +253,9 @@
       fill: none;
     }
 
-    /* Abstand zum Häkchen um die Hälfte verringert */
+    /* Abstand zwischen Häkchen und ProveSource: 1,25 px */
     #social-proof-popup .fomo-trust {
-      margin-left: -2.5px;
+      margin-left: -3.75px;
     }
 
     #social-proof-popup .fomo-close {
