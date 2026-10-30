@@ -4,6 +4,8 @@
  * Erstes Popup: 1 Sekunde
  * Anzeigedauer: 8 Sekunden
  * Abstand: 5 Sekunden
+ * Desktop: Hover bewegt das Popup 10 Pixel nach oben.
+ * Mobil: Antippen bewegt das Popup 10 Pixel nach oben.
  * Hover / gedrückte Maustaste pausieren die Ausblendung.
  */
 
@@ -154,6 +156,10 @@
       bottom: 22px;
     }
 
+    #social-proof-popup.fomo-visible.fomo-engaged {
+      bottom: 22px;
+    }
+
     #social-proof-popup .fomo-card {
       display: flex;
       align-items: center;
@@ -284,6 +290,11 @@
 
       #social-proof-popup.fomo-visible:hover {
         bottom: 8px;
+      }
+
+      /* Mobil: Beim Antippen 10 Pixel höher */
+      #social-proof-popup.fomo-visible.fomo-engaged {
+        bottom: 18px;
       }
 
       #social-proof-popup .fomo-card {
@@ -420,6 +431,8 @@
 
       clearTimeout(animationTimer);
 
+      // Position bei jeder neuen Anzeige zurücksetzen.
+      popup.classList.remove("fomo-engaged");
       popup.style.display = "block";
 
       requestAnimationFrame(() => {
@@ -446,6 +459,7 @@
       hideTimer = null;
 
       popup.classList.remove("fomo-visible");
+      popup.classList.remove("fomo-engaged");
 
       animationTimer = setTimeout(() => {
         if (!visible) {
@@ -476,9 +490,17 @@
       }
     );
 
-    popup.addEventListener("pointerdown", () => {
+    popup.addEventListener("pointerdown", event => {
       pressed = true;
       pause();
+
+      // NEU: Auf dem Handy beim Antippen nach oben bewegen.
+      if (
+        event.pointerType === "touch" ||
+        event.pointerType === "pen"
+      ) {
+        popup.classList.add("fomo-engaged");
+      }
     });
 
     function release() {
