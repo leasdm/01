@@ -99,11 +99,11 @@
     </svg>
   `;
 
-  // Korrigiertes Häkchen:
-  // Grauer Kreis + separat gezeichneter weißer Haken.
+  // Häkchen mit 16 × 16 Pixeln.
+  // Die viewBox bleibt 24 × 24, damit nichts abgeschnitten wird.
   const checkSvg = `
     <svg xmlns="http://www.w3.org/2000/svg"
-         viewBox="0 0 16 16"
+         viewBox="0 0 24 24"
          width="16"
          height="16"
          aria-hidden="true"
@@ -235,9 +235,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
-      flex: 0 0 24px;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
       padding: 0 !important;
       border: 0 !important;
       border-radius: 0 !important;
@@ -247,10 +247,10 @@
 
     #social-proof-popup .fomo-check svg {
       display: block !important;
-      width: 14px !important;
-      height: 14px !important;
-      min-width: 14px !important;
-      max-width: 14px !important;
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      max-width: 16px !important;
       fill: none;
     }
 
