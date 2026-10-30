@@ -99,8 +99,7 @@
     </svg>
   `;
 
-  // Häkchen: 16 Pixel Anzeigegröße.
-  // Die Zeichenfläche bleibt 24 × 24, um Abschneiden zu verhindern.
+  // Häkchen mit 16 × 16 Pixeln.
   const checkSvg = `
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 24 24"
@@ -252,6 +251,11 @@
       min-width: 16px !important;
       max-width: 16px !important;
       fill: none;
+    }
+
+    /* Abstand zum Häkchen um die Hälfte verringert */
+    #social-proof-popup .fomo-trust {
+      margin-left: -2.5px;
     }
 
     #social-proof-popup .fomo-close {
