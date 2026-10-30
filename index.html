@@ -1,15 +1,52 @@
 
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Popup Vorschau</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <title>Popup-Testseite</title>
 </head>
 <body>
 
-  <script src="./square.js?v=10"></script>
+  <h2>Popup-Testseite</h2>
+  <p id="status">JavaScript wird geprüft...</p>
+
+  <script>
+    window.popupScriptLoaded = false;
+
+    window.addEventListener("error", function(event) {
+      if (event.filename &&
+          event.filename.includes("square.js")) {
+        document.getElementById("status").textContent =
+          "JavaScript-Fehler: " + event.message;
+      }
+    });
+  </script>
+
+  <script
+    src="./square.js?v=11"
+    onload="window.popupScriptLoaded = true"
+    onerror="document.getElementById('status').textContent = 'FEHLER: square.js konnte nicht geladen werden.'">
+  </script>
+
+  <script>
+    setTimeout(function() {
+      const status = document.getElementById("status");
+      const popup = document.getElementById("social-proof-popup");
+
+      if (popup) {
+        status.textContent =
+          "Erfolg: Popup wurde erstellt!";
+      } else if (!window.popupScriptLoaded) {
+        status.textContent =
+          "FEHLER: square.js wurde nicht geladen.";
+      } else if (!status.textContent.startsWith("JavaScript-Fehler")) {
+        status.textContent =
+          "square.js geladen, aber kein Popup erstellt. JavaScript-Code prüfen.";
+      }
+    }, 2000);
+  </script>
 
 </body>
 </html>
