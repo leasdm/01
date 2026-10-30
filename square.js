@@ -99,8 +99,8 @@
     </svg>
   `;
 
-  // Häkchen mit 16 × 16 Pixeln.
-  // Die viewBox bleibt 24 × 24, damit nichts abgeschnitten wird.
+  // Häkchen: 16 Pixel Anzeigegröße.
+  // Die Zeichenfläche bleibt 24 × 24, um Abschneiden zu verhindern.
   const checkSvg = `
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 24 24"
