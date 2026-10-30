@@ -247,10 +247,10 @@
 
     #social-proof-popup .fomo-check svg {
       display: block !important;
-      width: 24px !important;
-      height: 24px !important;
-      min-width: 24px !important;
-      max-width: 24px !important;
+      width: 14px !important;
+      height: 14px !important;
+      min-width: 14px !important;
+      max-width: 14px !important;
       fill: none;
     }
 
