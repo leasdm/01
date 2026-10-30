@@ -4,9 +4,8 @@
  * Erstes Popup: 1 Sekunde
  * Anzeigedauer: 8 Sekunden
  * Abstand: 5 Sekunden
- * Desktop: Hover bewegt das Popup 10 Pixel nach oben.
- * Mobil: Antippen bewegt das Popup 10 Pixel nach oben.
- * Hover / gedrückte Maustaste pausieren die Ausblendung.
+ * Desktop-Hover pausiert die Ausblendung.
+ * Mobil: Berührung hebt die Karte um 10px an.
  */
 
 (function () {
@@ -101,7 +100,7 @@
     </svg>
   `;
 
-  // Häkchen mit 16 × 16 Pixeln.
+  // Häkchen: 16 × 16 Pixel.
   const checkSvg = `
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 24 24"
@@ -156,10 +155,6 @@
       bottom: 22px;
     }
 
-    #social-proof-popup.fomo-visible.fomo-engaged {
-      bottom: 22px;
-    }
-
     #social-proof-popup .fomo-card {
       display: flex;
       align-items: center;
@@ -172,6 +167,15 @@
       border: 1px solid #e7e7e7;
       border-radius: 10px;
       box-shadow: 0 5px 23px rgba(0,0,0,.17);
+
+      /* Neue Touch-Animation */
+      transition: transform .3s ease;
+      transform: translateY(0);
+    }
+
+    /* Mobil: Karte nach Antippen 10px anheben */
+    #social-proof-popup.fomo-visible.fomo-engaged .fomo-card {
+      transform: translateY(-10px);
     }
 
     #social-proof-popup .fomo-map {
@@ -259,7 +263,7 @@
       fill: none;
     }
 
-    /* Abstand zwischen Häkchen und ProveSource: 1,25 px */
+    /* Abstand Häkchen zu ProveSource: 1,25px */
     #social-proof-popup .fomo-trust {
       margin-left: -3.75px;
     }
@@ -290,11 +294,6 @@
 
       #social-proof-popup.fomo-visible:hover {
         bottom: 8px;
-      }
-
-      /* Mobil: Beim Antippen 10 Pixel höher */
-      #social-proof-popup.fomo-visible.fomo-engaged {
-        bottom: 18px;
       }
 
       #social-proof-popup .fomo-card {
@@ -431,7 +430,7 @@
 
       clearTimeout(animationTimer);
 
-      // Position bei jeder neuen Anzeige zurücksetzen.
+      // Position vor jeder neuen Anzeige zurücksetzen.
       popup.classList.remove("fomo-engaged");
       popup.style.display = "block";
 
@@ -458,8 +457,10 @@
       clearTimeout(hideTimer);
       hideTimer = null;
 
-      popup.classList.remove("fomo-visible");
-      popup.classList.remove("fomo-engaged");
+      popup.classList.remove(
+        "fomo-visible",
+        "fomo-engaged"
+      );
 
       animationTimer = setTimeout(() => {
         if (!visible) {
@@ -490,23 +491,70 @@
       }
     );
 
-    popup.addEventListener("pointerdown", event => {
+    // NEU: Direkte Berührungserkennung für Smartphones.
+    function engageOnTouch(event) {
+      if (event.target.closest(".fomo-close")) return;
+      if (!visible || dismissed) return;
+
+      popup.classList.add("fomo-engaged");
       pressed = true;
       pause();
+    }
 
-      // NEU: Auf dem Handy beim Antippen nach oben bewegen.
-      if (
-        event.pointerType === "touch" ||
-        event.pointerType === "pen"
-      ) {
-        popup.classList.add("fomo-engaged");
+    popup.addEventListener(
+      "touchstart",
+      engageOnTouch,
+      { passive: true }
+    );
+
+    // Zusätzliche Erkennung über Pointer Events.
+    popup.addEventListener(
+      "pointerdown",
+      event => {
+        if (event.target.closest(".fomo-close")) return;
+
+        pressed = true;
+        pause();
+
+        if (
+          event.pointerType === "touch" ||
+          event.pointerType === "pen"
+        ) {
+          popup.classList.add("fomo-engaged");
+        }
       }
-    });
+    );
+
+    // Fallback für Browser, die Click melden.
+    popup.querySelector(".fomo-card")
+      .addEventListener("click", event => {
+        if (event.target.closest(".fomo-close")) return;
+
+        if (
+          window.matchMedia(
+            "(hover: none), (pointer: coarse)"
+          ).matches
+        ) {
+          popup.classList.add("fomo-engaged");
+        }
+      });
 
     function release() {
       pressed = false;
       resume();
     }
+
+    popup.addEventListener(
+      "touchend",
+      release,
+      { passive: true }
+    );
+
+    popup.addEventListener(
+      "touchcancel",
+      release,
+      { passive: true }
+    );
 
     document.addEventListener("pointerup", release);
     document.addEventListener("pointercancel", release);
