@@ -1,14 +1,12 @@
 
 /*
- * FomoToolkit – Automatisches Kauf-Popup
+ * FomoToolkit – Produktbezogenes Kauf-Popup
  *
- * Google Sheets -> Apps Script -> Cloudflare -> Popup
+ * Mit data-product="bundle20" oder
+ * data-product="evolution" auf der Verkaufsseite.
  *
- * Erste Anzeige: 1 Sekunde nach Datenabruf
- * Anzeigedauer: 8 Sekunden
- * Abstand: 5 Sekunden
- * Datenaktualisierung: alle 30 Sekunden
- * Maximal die letzten 10 verfügbaren Käufe
+ * Ohne data-product weiterhin alle Käufe,
+ * beispielsweise in der GitHub-Vorschau.
  */
 
 (function () {
@@ -17,8 +15,27 @@
   if (window.__squarePopupActive) return;
   window.__squarePopupActive = true;
 
+  const scriptTag = document.currentScript;
+
+  const productKey = scriptTag
+    ? (
+        scriptTag.getAttribute(
+          "data-product"
+        ) || ""
+      ).trim().toLowerCase()
+    : "";
+
   const API_URL =
     "https://fomotoolkit-kaufdaten.essertmatthias.workers.dev/";
+
+  const FEED_URL =
+    API_URL +
+    (
+      productKey
+        ? "?product=" +
+          encodeURIComponent(productKey)
+        : ""
+    );
 
   const FIRST_DELAY = 1000;
   const SHOW_DURATION = 8000;
@@ -27,7 +44,6 @@
   const ANIMATION_DURATION = 400;
   const MAX_PURCHASES = 10;
 
-  // Graues Häkchen mit 16 × 16 Pixeln
   const checkSvg = `
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 24 24"
@@ -51,8 +67,8 @@
     </svg>
   `;
 
-  function escapeSvg(text) {
-    return String(text).replace(
+  function escapeSvg(value) {
+    return String(value).replace(
       /[&<>"']/g,
       char => ({
         "&": "&amp;",
@@ -64,21 +80,19 @@
     );
   }
 
-  // Schematische Karte mit dem Stadtnamen
-  // aus der Google-Tabelle.
   function mapUrl(city) {
-    const place = String(city || "").slice(0, 24);
-
-    const fontSize =
-      place.length > 16 ? 11 :
-      place.length > 11 ? 14 : 18;
+    const label = escapeSvg(
+      String(city || "").slice(0, 24)
+    );
 
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg"
            viewBox="0 0 180 180">
 
-        <rect width="180" height="180"
-              fill="#f1f1ec"/>
+        <rect
+          width="180"
+          height="180"
+          fill="#f1f1ec"/>
 
         <path
           d="M0 2L45 0 28 40 0 50Z
@@ -93,10 +107,11 @@
           stroke="#c4deeb"
           stroke-width="12"/>
 
-        <g stroke="#fff"
-           fill="none"
-           stroke-width="9"
-           stroke-linecap="round">
+        <g
+          stroke="#fff"
+          fill="none"
+          stroke-width="9"
+          stroke-linecap="round">
           <path
             d="M0 21L180 45
                M0 68L180 112
@@ -105,10 +120,11 @@
                M140 0L31 180"/>
         </g>
 
-        <g stroke="#e8c66e"
-           fill="none"
-           stroke-width="4"
-           stroke-linecap="round">
+        <g
+          stroke="#e8c66e"
+          fill="none"
+          stroke-width="4"
+          stroke-linecap="round">
           <path
             d="M0 21L180 45
                M0 68L180 112
@@ -117,9 +133,10 @@
                M140 0L31 180"/>
         </g>
 
-        <g stroke="#fff"
-           stroke-width="3"
-           fill="none">
+        <g
+          stroke="#fff"
+          stroke-width="3"
+          fill="none">
           <path
             d="M0 105L180 147
                M17 0L110 180
@@ -141,9 +158,7 @@
           fill="#525252"
           text-anchor="middle"
           font-family="Arial,sans-serif"
-          font-size="${fontSize}">
-          ${escapeSvg(place)}
-        </text>
+          font-size="14">${label}</text>
       </svg>
     `;
 
@@ -153,11 +168,10 @@
     );
   }
 
-  // Länderflagge automatisch bestimmen
   function flagForCountry(country) {
-    const value = String(country || "")
-      .trim()
-      .toLowerCase();
+    const value = String(
+      country || ""
+    ).toLowerCase().trim();
 
     if (
       ["germany", "deutschland", "de"]
@@ -177,7 +191,6 @@
     return "";
   }
 
-  // Automatische Berechnung der Kaufzeit
   function timeAgo(dateString) {
     const elapsed =
       Date.now() - Date.parse(dateString);
@@ -197,22 +210,20 @@
     if (hours < 24) {
       return (
         "vor " + hours + " " +
-        (hours === 1 ? "Stunde" : "Stunden")
+        (
+          hours === 1
+            ? "Stunde"
+            : "Stunden"
+        )
       );
     }
 
-    if (hours < 48) {
-      return "vor einem Tag";
-    }
-
-    if (hours < 72) {
-      return "vor zwei Tagen";
-    }
+    if (hours < 48) return "vor einem Tag";
+    if (hours < 72) return "vor zwei Tagen";
 
     return "vor kurzem";
   }
 
-  // CSS für das Popup
   const style = document.createElement("style");
 
   style.textContent = `
@@ -262,7 +273,6 @@
       transform: translateY(0);
     }
 
-    /* Smartphone: 10 Pixel nach oben */
     #social-proof-popup.fomo-visible.fomo-engaged
     .fomo-card {
       transform: translateY(-10px);
@@ -353,7 +363,6 @@
       fill: none;
     }
 
-    /* Abstand zwischen Häkchen und Text: 1,25 Pixel */
     #social-proof-popup .fomo-trust {
       margin-left: -3.75px;
     }
@@ -401,7 +410,6 @@
     const popup = document.createElement("aside");
 
     popup.id = "social-proof-popup";
-
     popup.setAttribute("role", "status");
     popup.setAttribute("aria-live", "polite");
 
@@ -428,11 +436,9 @@
 
           <div class="fomo-meta">
             <span class="fomo-time"></span>
-
             <span class="fomo-check">
               ${checkSvg}
             </span>
-
             <span class="fomo-trust">
               Kaufmeldung
             </span>
@@ -472,7 +478,7 @@
       popup.querySelector(".fomo-close");
 
     let items = [];
-    let currentIndex = 0;
+    let index = 0;
     let active = null;
 
     let visible = false;
@@ -488,10 +494,7 @@
     let animationTimer = null;
 
     let loading = false;
-    let pollingTimer = null;
-    let clockTimer = null;
 
-    // Kaufzeit aktualisieren
     function updateTime() {
       if (active) {
         timeEl.textContent =
@@ -499,27 +502,25 @@
       }
     }
 
-    // Aktuelle Bestellung anzeigen
     function render(item) {
       active = item;
 
       nameEl.textContent = item.name;
 
-      cityEl.textContent =
-        item.city ? "(" + item.city + ")" : "";
+      cityEl.textContent = item.city
+        ? "(" + item.city + ")"
+        : "";
 
       flagEl.textContent =
         flagForCountry(item.country);
 
-      productEl.textContent =
-        item.product;
+      productEl.textContent = item.product;
 
       mapEl.src = mapUrl(item.city);
 
       updateTime();
     }
 
-    // Ausblendung pausieren
     function pause() {
       if (hideTimer === null) return;
 
@@ -533,7 +534,6 @@
       );
     }
 
-    // Ausblendung fortsetzen
     function resume() {
       if (
         !visible ||
@@ -552,7 +552,6 @@
       }, remaining);
     }
 
-    // Nächstes Kauf-Popup anzeigen
     function show() {
       if (
         dismissed ||
@@ -560,12 +559,11 @@
         !items.length
       ) return;
 
-      const item =
-        items[currentIndex % items.length];
+      render(
+        items[index % items.length]
+      );
 
-      render(item);
-
-      currentIndex++;
+      index++;
 
       visible = true;
       hovered = false;
@@ -574,7 +572,9 @@
 
       clearTimeout(animationTimer);
 
-      popup.classList.remove("fomo-engaged");
+      popup.classList.remove(
+        "fomo-engaged"
+      );
 
       popup.style.display = "block";
 
@@ -582,15 +582,16 @@
         requestAnimationFrame(() => {
           if (!visible || dismissed) return;
 
-          popup.classList.add("fomo-visible");
+          popup.classList.add(
+            "fomo-visible"
+          );
 
           resume();
         });
       });
     }
 
-    // Nächste Anzeige planen
-    function scheduleShow(delay) {
+    function schedule(delay) {
       if (
         dismissed ||
         !items.length ||
@@ -603,7 +604,6 @@
       }, delay);
     }
 
-    // Popup ausblenden
     function hide() {
       if (
         !visible ||
@@ -628,10 +628,9 @@
         }
       }, ANIMATION_DURATION);
 
-      scheduleShow(NEXT_DELAY);
+      schedule(NEXT_DELAY);
     }
 
-    // Desktop: Maus über dem Popup
     popup.addEventListener(
       "pointerenter",
       event => {
@@ -656,11 +655,10 @@
       }
     );
 
-    // Smartphone: Antippen und anheben
     function engage(event) {
       if (
-        !visible ||
         dismissed ||
+        !visible ||
         event.target.closest(".fomo-close")
       ) return;
 
@@ -672,7 +670,9 @@
         event.pointerType === "touch" ||
         event.pointerType === "pen"
       ) {
-        popup.classList.add("fomo-engaged");
+        popup.classList.add(
+          "fomo-engaged"
+        );
       }
     }
 
@@ -689,6 +689,7 @@
 
     popup.querySelector(".fomo-card")
       .addEventListener("click", event => {
+
         if (
           event.target.closest(".fomo-close")
         ) return;
@@ -698,7 +699,9 @@
             "(hover: none), (pointer: coarse)"
           ).matches
         ) {
-          popup.classList.add("fomo-engaged");
+          popup.classList.add(
+            "fomo-engaged"
+          );
         }
       });
 
@@ -734,7 +737,6 @@
       release
     );
 
-    // Schließen
     closeEl.addEventListener("click", () => {
       dismissed = true;
       visible = false;
@@ -743,13 +745,12 @@
       clearTimeout(nextTimer);
       clearTimeout(animationTimer);
 
-      clearInterval(pollingTimer);
+      clearInterval(pollTimer);
       clearInterval(clockTimer);
 
       popup.remove();
     });
 
-    // Neue Kaufdaten automatisch laden
     async function refresh() {
       if (dismissed || loading) return;
 
@@ -757,10 +758,8 @@
 
       try {
         const response = await fetch(
-          API_URL,
-          {
-            cache: "no-store"
-          }
+          FEED_URL,
+          { cache: "no-store" }
         );
 
         if (!response.ok) {
@@ -772,17 +771,12 @@
         const data = await response.json();
 
         if (
-          !data ||
           data.success !== true ||
           !Array.isArray(data.items)
         ) {
-          throw new Error(
-            "Ungültige Datenantwort"
-          );
+          throw new Error("Invalid feed");
         }
 
-        // Testbestellungen und echte Käufe
-        // werden identisch behandelt.
         const updated = data.items
 
           .filter(item =>
@@ -819,44 +813,39 @@
 
           .slice(0, MAX_PURCHASES);
 
-        // Neuen Kauf erkennen
-        const previousNewest = items[0]
+        const oldNewest = items.length
           ? (
               items[0].name + "|" +
               items[0].product + "|" +
               items[0].purchasedAt
             )
-          : null;
+          : "";
 
-        const newNewest = updated[0]
+        const newNewest = updated.length
           ? (
               updated[0].name + "|" +
               updated[0].product + "|" +
               updated[0].purchasedAt
             )
-          : null;
+          : "";
 
-        // Kaufdaten übernehmen
         items = updated;
 
-        // Wenn ein neuer Kauf eingetroffen ist,
-        // mit der neuesten Bestellung beginnen.
-        if (newNewest !== previousNewest) {
-          currentIndex = 0;
+        if (newNewest !== oldNewest) {
+          index = 0;
         }
 
-        // Erstes Popup starten
         if (
           items.length &&
           !visible &&
           nextTimer === null
         ) {
-          scheduleShow(FIRST_DELAY);
+          schedule(FIRST_DELAY);
         }
 
       } catch (error) {
         console.warn(
-          "FomoToolkit: Kaufdaten konnten nicht aktualisiert werden.",
+          "FomoToolkit: Kaufdaten konnten nicht geladen werden.",
           error
         );
 
@@ -865,21 +854,17 @@
       }
     }
 
-    // Direkt beim Seitenaufruf Daten laden
-    refresh();
-
-    // Alle 30 Sekunden Google-Sheets-Daten
-    // über Cloudflare erneut abrufen
-    pollingTimer = setInterval(
+    const pollTimer = setInterval(
       refresh,
       REFRESH_INTERVAL
     );
 
-    // Zeitangabe jede Minute neu berechnen
-    clockTimer = setInterval(
+    const clockTimer = setInterval(
       updateTime,
       60000
     );
+
+    refresh();
   }
 
   if (document.readyState === "loading") {
