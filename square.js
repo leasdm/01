@@ -1,12 +1,15 @@
 
 /*
- * FomoToolkit – Produktbezogenes Kauf-Popup
+ * FomoToolkit – Kauf-Popup mit Produktbildern
  *
- * Mit data-product="bundle20" oder
- * data-product="evolution" auf der Verkaufsseite.
+ * Datenquelle: Cloudflare -> Google Sheets
  *
- * Ohne data-product weiterhin alle Käufe,
- * beispielsweise in der GitHub-Vorschau.
+ * Produktfilter:
+ * data-product="bundle20"
+ * data-product="evolution"
+ * data-product="dpbs"
+ *
+ * Ohne data-product: alle Käufe
  */
 
 (function () {
@@ -18,24 +21,18 @@
   const scriptTag = document.currentScript;
 
   const productKey = scriptTag
-    ? (
-        scriptTag.getAttribute(
-          "data-product"
-        ) || ""
-      ).trim().toLowerCase()
+    ? (scriptTag.getAttribute("data-product") || "")
+        .trim()
+        .toLowerCase()
     : "";
 
   const API_URL =
     "https://fomotoolkit-kaufdaten.essertmatthias.workers.dev/";
 
-  const FEED_URL =
-    API_URL +
-    (
-      productKey
-        ? "?product=" +
-          encodeURIComponent(productKey)
-        : ""
-    );
+  const FEED_URL = productKey
+    ? API_URL + "?product=" +
+      encodeURIComponent(productKey)
+    : API_URL;
 
   const FIRST_DELAY = 1000;
   const SHOW_DURATION = 8000;
@@ -44,6 +41,103 @@
   const ANIMATION_DURATION = 400;
   const MAX_PURCHASES = 10;
 
+
+  // =====================================
+  // 1. PRODUKTBILDER
+  // =====================================
+
+  const IMAGE_BUNDLE =
+    "https://d1yei2z3i6k35z.cloudfront.net/16532744/6aa57014a394a8.77605624_BundleBildSeptember26.png";
+
+  const IMAGE_EVOLUTION =
+    "https://d1yei2z3i6k35z.cloudfront.net/16532744/6aca2d18d00d73.95403270_Evolution-Produktbild.png";
+
+  const IMAGE_DPBS =
+    "https://d1yei2z3i6k35z.cloudfront.net/16532744/6ad5c047d5aad1.46030467_DigitaleProduktBusinessStaranleitung.png";
+
+
+  // Platzhalter für andere Produkte
+  const placeholderSvg = `
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 80 80">
+
+      <rect width="80" height="80"
+            rx="8" fill="#f2f2f2"/>
+
+      <rect x="22" y="29"
+            width="36" height="35"
+            rx="3" fill="none"
+            stroke="#999" stroke-width="3"/>
+
+      <path d="M32 31v-7a8 8 0 0 1 16 0v7"
+            fill="none"
+            stroke="#999"
+            stroke-width="3"
+            stroke-linecap="round"/>
+    </svg>
+  `;
+
+  const PLACEHOLDER_IMAGE =
+    "data:image/svg+xml;charset=utf-8," +
+    encodeURIComponent(placeholderSvg);
+
+
+  // =====================================
+  // 2. PRODUKTE ERKENNEN
+  // =====================================
+
+  function normalizeProduct(value) {
+    return String(value || "")
+      .normalize("NFKC")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function productImageFor(product) {
+
+    const normalized =
+      normalizeProduct(product);
+
+    // Online-Kurs-Bundle
+    if ([
+      "20-kurs-bundle",
+      "online-kurs (bundle)",
+      "online-kurs (bundle-rabatt-upgrade)"
+    ].includes(normalized)) {
+
+      return IMAGE_BUNDLE;
+
+    }
+
+    // Evolution
+    if ([
+      "evolution",
+      "evolution programm"
+    ].includes(normalized)) {
+
+      return IMAGE_EVOLUTION;
+
+    }
+
+    // Digitale Produkt Business Startanleitung
+    if ([
+      "digitale produkt business startanleitung",
+      "digitales produkt business (startanleitung)"
+    ].includes(normalized)) {
+
+      return IMAGE_DPBS;
+
+    }
+
+    return PLACEHOLDER_IMAGE;
+  }
+
+
+  // =====================================
+  // 3. HÄKCHEN
+  // =====================================
+
   const checkSvg = `
     <svg xmlns="http://www.w3.org/2000/svg"
          viewBox="0 0 24 24"
@@ -51,6 +145,7 @@
          height="16"
          aria-hidden="true"
          focusable="false">
+
       <circle
         cx="12"
         cy="12"
@@ -64,134 +159,55 @@
         stroke-width="2.3"
         stroke-linecap="round"
         stroke-linejoin="round"/>
+
     </svg>
   `;
 
-  function escapeSvg(value) {
-    return String(value).replace(
-      /[&<>"']/g,
-      char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&apos;"
-      })[char]
-    );
-  }
 
-  function mapUrl(city) {
-    const label = escapeSvg(
-      String(city || "").slice(0, 24)
-    );
-
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg"
-           viewBox="0 0 180 180">
-
-        <rect
-          width="180"
-          height="180"
-          fill="#f1f1ec"/>
-
-        <path
-          d="M0 2L45 0 28 40 0 50Z
-             M130 0H180V50L156 41Z
-             M0 115L42 90 68 135 24 180H0Z
-             M150 92L180 67V180H110Z"
-          fill="#d6ebcc"/>
-
-        <path
-          d="M22 -10C45 28 48 43 66 70S90 121 136 190"
-          fill="none"
-          stroke="#c4deeb"
-          stroke-width="12"/>
-
-        <g
-          stroke="#fff"
-          fill="none"
-          stroke-width="9"
-          stroke-linecap="round">
-          <path
-            d="M0 21L180 45
-               M0 68L180 112
-               M0 149L180 72
-               M45 0L92 180
-               M140 0L31 180"/>
-        </g>
-
-        <g
-          stroke="#e8c66e"
-          fill="none"
-          stroke-width="4"
-          stroke-linecap="round">
-          <path
-            d="M0 21L180 45
-               M0 68L180 112
-               M0 149L180 72
-               M45 0L92 180
-               M140 0L31 180"/>
-        </g>
-
-        <g
-          stroke="#fff"
-          stroke-width="3"
-          fill="none">
-          <path
-            d="M0 105L180 147
-               M17 0L110 180
-               M0 173L180 14"/>
-        </g>
-
-        <rect
-          x="8"
-          y="76"
-          width="164"
-          height="29"
-          rx="4"
-          fill="#ffffff"
-          fill-opacity="0.88"/>
-
-        <text
-          x="90"
-          y="96"
-          fill="#525252"
-          text-anchor="middle"
-          font-family="Arial,sans-serif"
-          font-size="14">${label}</text>
-      </svg>
-    `;
-
-    return (
-      "data:image/svg+xml;charset=utf-8," +
-      encodeURIComponent(svg)
-    );
-  }
+  // =====================================
+  // 4. LÄNDERFLAGGEN
+  // =====================================
 
   function flagForCountry(country) {
-    const value = String(
-      country || ""
-    ).toLowerCase().trim();
 
-    if (
-      ["germany", "deutschland", "de"]
-        .includes(value)
-    ) return "🇩🇪";
+    const value = String(country || "")
+      .trim()
+      .toLowerCase();
 
-    if (
-      ["austria", "österreich", "at"]
-        .includes(value)
-    ) return "🇦🇹";
+    if ([
+      "germany",
+      "deutschland",
+      "de"
+    ].includes(value)) {
+      return "🇩🇪";
+    }
 
-    if (
-      ["switzerland", "schweiz", "ch"]
-        .includes(value)
-    ) return "🇨🇭";
+    if ([
+      "austria",
+      "österreich",
+      "at"
+    ].includes(value)) {
+      return "🇦🇹";
+    }
+
+    if ([
+      "switzerland",
+      "schweiz",
+      "ch"
+    ].includes(value)) {
+      return "🇨🇭";
+    }
 
     return "";
   }
 
+
+  // =====================================
+  // 5. KAUFZEIT BERECHNEN
+  // =====================================
+
   function timeAgo(dateString) {
+
     const elapsed =
       Date.now() - Date.parse(dateString);
 
@@ -210,23 +226,30 @@
     if (hours < 24) {
       return (
         "vor " + hours + " " +
-        (
-          hours === 1
-            ? "Stunde"
-            : "Stunden"
-        )
+        (hours === 1 ? "Stunde" : "Stunden")
       );
     }
 
-    if (hours < 48) return "vor einem Tag";
-    if (hours < 72) return "vor zwei Tagen";
+    if (hours < 48) {
+      return "vor einem Tag";
+    }
+
+    if (hours < 72) {
+      return "vor zwei Tagen";
+    }
 
     return "vor kurzem";
   }
 
+
+  // =====================================
+  // 6. POPUP DESIGN
+  // =====================================
+
   const style = document.createElement("style");
 
   style.textContent = `
+
     #social-proof-popup {
       position: fixed;
       left: 12px;
@@ -269,6 +292,7 @@
       border: 1px solid #e7e7e7;
       border-radius: 10px;
       box-shadow: 0 5px 23px rgba(0,0,0,.17);
+
       transition: transform .3s ease;
       transform: translateY(0);
     }
@@ -278,13 +302,16 @@
       transform: translateY(-10px);
     }
 
-    #social-proof-popup .fomo-map {
+    /* PRODUKTBILD */
+
+    #social-proof-popup .fomo-product-image {
       width: 68px;
       height: 68px;
       min-width: 68px;
-      border-radius: 8px;
-      object-fit: cover;
       display: block;
+      border-radius: 8px;
+      object-fit: contain;
+      background: #fff;
     }
 
     #social-proof-popup .fomo-text {
@@ -363,6 +390,8 @@
       fill: none;
     }
 
+    /* Abstand zwischen Häkchen und Text */
+
     #social-proof-popup .fomo-trust {
       margin-left: -3.75px;
     }
@@ -384,6 +413,7 @@
     }
 
     @media (max-width: 480px) {
+
       #social-proof-popup {
         left: 8px;
         bottom: 8px;
@@ -397,6 +427,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+
       #social-proof-popup,
       #social-proof-popup .fomo-card {
         transition: none;
@@ -406,10 +437,18 @@
 
   document.head.appendChild(style);
 
+
+  // =====================================
+  // 7. POPUP ERSTELLEN
+  // =====================================
+
   function init() {
-    const popup = document.createElement("aside");
+
+    const popup =
+      document.createElement("aside");
 
     popup.id = "social-proof-popup";
+
     popup.setAttribute("role", "status");
     popup.setAttribute("aria-live", "polite");
 
@@ -417,8 +456,8 @@
       <div class="fomo-card">
 
         <img
-          class="fomo-map"
-          alt="Schematische Kartenillustration">
+          class="fomo-product-image"
+          alt="Produktbild">
 
         <div class="fomo-text">
 
@@ -436,9 +475,11 @@
 
           <div class="fomo-meta">
             <span class="fomo-time"></span>
+
             <span class="fomo-check">
               ${checkSvg}
             </span>
+
             <span class="fomo-trust">
               Kaufmeldung
             </span>
@@ -456,6 +497,11 @@
 
     document.body.appendChild(popup);
 
+
+    // ===================================
+    // 8. ELEMENTE
+    // ===================================
+
     const nameEl =
       popup.querySelector(".fomo-name");
 
@@ -471,11 +517,26 @@
     const timeEl =
       popup.querySelector(".fomo-time");
 
-    const mapEl =
-      popup.querySelector(".fomo-map");
+    const imageEl =
+      popup.querySelector(".fomo-product-image");
 
     const closeEl =
       popup.querySelector(".fomo-close");
+
+
+    // Falls ein Produktbild nicht lädt
+    imageEl.addEventListener("error", () => {
+
+      if (imageEl.src !== PLACEHOLDER_IMAGE) {
+        imageEl.src = PLACEHOLDER_IMAGE;
+      }
+
+    });
+
+
+    // ===================================
+    // 9. STATUS
+    // ===================================
 
     let items = [];
     let index = 0;
@@ -495,14 +556,22 @@
 
     let loading = false;
 
+
+    // ===================================
+    // 10. KAUF ANZEIGEN
+    // ===================================
+
     function updateTime() {
+
       if (active) {
         timeEl.textContent =
           timeAgo(active.purchasedAt);
       }
+
     }
 
     function render(item) {
+
       active = item;
 
       nameEl.textContent = item.name;
@@ -514,14 +583,26 @@
       flagEl.textContent =
         flagForCountry(item.country);
 
-      productEl.textContent = item.product;
+      productEl.textContent =
+        item.product;
 
-      mapEl.src = mapUrl(item.city);
+      // Passendes Produktbild automatisch
+      imageEl.alt =
+        "Produktbild: " + item.product;
+
+      imageEl.src =
+        productImageFor(item.product);
 
       updateTime();
     }
 
+
+    // ===================================
+    // 11. TIMER
+    // ===================================
+
     function pause() {
+
       if (hideTimer === null) return;
 
       clearTimeout(hideTimer);
@@ -532,9 +613,11 @@
         remaining -
         (performance.now() - startedAt)
       );
+
     }
 
     function resume() {
+
       if (
         !visible ||
         dismissed ||
@@ -546,13 +629,23 @@
       startedAt = performance.now();
 
       hideTimer = setTimeout(() => {
+
         hideTimer = null;
         remaining = 0;
+
         hide();
+
       }, remaining);
+
     }
 
+
+    // ===================================
+    // 12. POPUP EINBLENDEN
+    // ===================================
+
     function show() {
+
       if (
         dismissed ||
         visible ||
@@ -579,7 +672,9 @@
       popup.style.display = "block";
 
       requestAnimationFrame(() => {
+
         requestAnimationFrame(() => {
+
           if (!visible || dismissed) return;
 
           popup.classList.add(
@@ -587,11 +682,16 @@
           );
 
           resume();
+
         });
+
       });
+
     }
 
+
     function schedule(delay) {
+
       if (
         dismissed ||
         !items.length ||
@@ -599,12 +699,21 @@
       ) return;
 
       nextTimer = setTimeout(() => {
+
         nextTimer = null;
         show();
+
       }, delay);
+
     }
 
+
+    // ===================================
+    // 13. POPUP AUSBLENDEN
+    // ===================================
+
     function hide() {
+
       if (
         !visible ||
         dismissed ||
@@ -623,39 +732,57 @@
       );
 
       animationTimer = setTimeout(() => {
+
         if (!visible) {
           popup.style.display = "none";
         }
+
       }, ANIMATION_DURATION);
 
       schedule(NEXT_DELAY);
+
     }
+
+
+    // ===================================
+    // 14. DESKTOP HOVER
+    // ===================================
 
     popup.addEventListener(
       "pointerenter",
       event => {
+
         if (event.pointerType === "touch") {
           return;
         }
 
         hovered = true;
         pause();
+
       }
     );
 
     popup.addEventListener(
       "pointerleave",
       event => {
+
         if (event.pointerType === "touch") {
           return;
         }
 
         hovered = false;
         resume();
+
       }
     );
 
+
+    // ===================================
+    // 15. SMARTPHONE TOUCH
+    // ===================================
+
     function engage(event) {
+
       if (
         dismissed ||
         !visible ||
@@ -670,10 +797,13 @@
         event.pointerType === "touch" ||
         event.pointerType === "pen"
       ) {
+
         popup.classList.add(
           "fomo-engaged"
         );
+
       }
+
     }
 
     popup.addEventListener(
@@ -699,15 +829,21 @@
             "(hover: none), (pointer: coarse)"
           ).matches
         ) {
+
           popup.classList.add(
             "fomo-engaged"
           );
+
         }
+
       });
 
+
     function release() {
+
       pressed = false;
       resume();
+
     }
 
     popup.addEventListener(
@@ -737,7 +873,13 @@
       release
     );
 
+
+    // ===================================
+    // 16. SCHLIESSEN
+    // ===================================
+
     closeEl.addEventListener("click", () => {
+
       dismissed = true;
       visible = false;
 
@@ -749,23 +891,33 @@
       clearInterval(clockTimer);
 
       popup.remove();
+
     });
 
+
+    // ===================================
+    // 17. GOOGLE-SHEETS-DATEN LADEN
+    // ===================================
+
     async function refresh() {
+
       if (dismissed || loading) return;
 
       loading = true;
 
       try {
+
         const response = await fetch(
           FEED_URL,
           { cache: "no-store" }
         );
 
         if (!response.ok) {
+
           throw new Error(
             "HTTP " + response.status
           );
+
         }
 
         const data = await response.json();
@@ -774,23 +926,33 @@
           data.success !== true ||
           !Array.isArray(data.items)
         ) {
-          throw new Error("Invalid feed");
+
+          throw new Error(
+            "Ungültige Kaufdaten"
+          );
+
         }
 
         const updated = data.items
 
           .filter(item =>
+
             item &&
+
             typeof item.name === "string" &&
             item.name.trim() &&
+
             typeof item.product === "string" &&
             item.product.trim() &&
+
             Number.isFinite(
               Date.parse(item.purchasedAt)
             )
+
           )
 
           .map(item => ({
+
             name: item.name.slice(0, 45),
 
             city: String(
@@ -804,6 +966,7 @@
             product: item.product.slice(0, 100),
 
             purchasedAt: item.purchasedAt
+
           }))
 
           .sort((a, b) =>
@@ -812,6 +975,7 @@
           )
 
           .slice(0, MAX_PURCHASES);
+
 
         const oldNewest = items.length
           ? (
@@ -829,6 +993,7 @@
             )
           : "";
 
+
         items = updated;
 
         if (newNewest !== oldNewest) {
@@ -840,19 +1005,30 @@
           !visible &&
           nextTimer === null
         ) {
+
           schedule(FIRST_DELAY);
+
         }
 
       } catch (error) {
+
         console.warn(
           "FomoToolkit: Kaufdaten konnten nicht geladen werden.",
           error
         );
 
       } finally {
+
         loading = false;
+
       }
+
     }
+
+
+    // ===================================
+    // 18. AUTOMATISIERUNG STARTEN
+    // ===================================
 
     const pollTimer = setInterval(
       refresh,
@@ -865,16 +1041,26 @@
     );
 
     refresh();
+
   }
 
+
+  // =====================================
+  // 19. INITIALISIERUNG
+  // =====================================
+
   if (document.readyState === "loading") {
+
     document.addEventListener(
       "DOMContentLoaded",
       init,
       { once: true }
     );
+
   } else {
+
     init();
+
   }
 
 })();
